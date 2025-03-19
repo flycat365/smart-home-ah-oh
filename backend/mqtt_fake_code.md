@@ -64,7 +64,7 @@
             "rw": "r"
         },
         {
-            "topic": "alert",
+            "topic": "/alert",
             "type": "bool",
             "desc": "传感器报警状态",
             "rw": "rw"
