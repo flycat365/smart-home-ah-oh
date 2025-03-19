@@ -1,0 +1,19 @@
+FROM alpine:3.19 AS builder
+RUN apk add --no-cache \
+    build-base \
+    cmake \
+    spdlog-dev \
+    boost-dev \
+    linux-headers
+WORKDIR /app
+COPY . .
+RUN mkdir build && cd build && \
+    cmake .. && make -j$(nproc)
+
+FROM alpine:3.19
+RUN apk add --no-cache \
+    libstdc++ \
+    spdlog
+COPY --from=builder /app/build/ahoh-http-server /usr/local/bin/
+#EXPOSE 8080
+CMD ["ahoh-http-server"]

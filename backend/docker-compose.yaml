@@ -1,0 +1,46 @@
+version: '3'
+services:
+    reverse-proxy:
+      image: nginx:latest
+      ports:
+        # http
+        - 80:80
+        # mqtt
+        - 1883:1883
+        - 8083:8083
+        - 9001:9001
+      volumes:
+        - ./nginx.conf:/etc/nginx/nginx.conf
+        - ./html:/web-pages/default
+        - ../web/ahoh-plane/dist:/web-pages/ahoh-plane
+      restart: on-failure:3
+      depends_on:
+        - mqtt-broker
+        - http-api
+      #  - database
+      #  - cache
+    
+    mqtt-broker:
+      image: eclipse-mosquitto:latest
+      volumes:
+        - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      restart: on-failure:3
+
+    http-api:
+      build: ./http-api
+      restart: on-failure:3
+      #depends_on:
+      #  - database
+      #  - cache
+
+    #database:
+    #  image: postgres:latest
+    #  shm_size: 128mb
+    #  environment:
+    #    POSTGRES_PASSWORD: example
+    #  restart: on-failure:3
+
+    #cache: 
+    #  image: redis:latest
+    #  restart: on-failure:3
+
