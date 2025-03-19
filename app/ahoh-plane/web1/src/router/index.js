@@ -1,31 +1,41 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+import MainPage from '../views/MainPage.vue';
+import MapEditor from '../views/MapEditor.vue';
+import SettingsView from '../views/SettingsView.vue';
+import DeviceDetails from '../views/DeviceDetails.vue';
 
+// 注册 Vue Router
+Vue.use(VueRouter);
 
-Vue.use(VueRouter)
-
+// 定义路由
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: () => import('../views/MainPage.vue')
+    name: 'MainPage',
+    component: MainPage
   },
   {
     path: '/map-editor',
     name: 'MapEditor',
-    component: () => import('../views/MapEditor.vue')
+    component: MapEditor
   },
   {
     path: '/settings',
-    name: 'Settings',
-    component: () => import('../views/SettingsView.vue') // 更新文件路径
+    name: 'SettingsView',
+    component: SettingsView
+  },
+  {
+    path: '/device/:deviceId',
+    name: 'DeviceDetails',
+    component: DeviceDetails
   }
-]
+];
 
+// 创建路由器实例
 const router = new VueRouter({
   mode: 'history',
-  base: process.env.BASE_URL,
   routes
-})
+});
 
-export default router
+export default router;

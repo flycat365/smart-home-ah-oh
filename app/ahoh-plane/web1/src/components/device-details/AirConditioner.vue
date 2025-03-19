@@ -1,56 +1,79 @@
 <template>
-  <div class="ac-details">
-    <h3>空调控制器</h3>
-    <div class="mode-selector">
-      <button 
-        v-for="mode in modes" 
-        :key="mode"
-        :class="{active: modelValue.mode === mode}"
-        @click="updateMode(mode)"
-      >
-        {{ modeMap[mode] }}
-      </button>
-    </div>
-    <div class="temperature-control">
-      <button @click="updateTemperature(-1)">-</button>
-      <span>{{ modelValue.temperature }}℃</span>
-      <button @click="updateTemperature(1)">+</button>
-    </div>
+  <div class="air-conditioner-details">
+    <h2>{{ localDevice.name }}</h2>
+    <p>状态: {{ localDevice.status === 'online' ? '在线' : '离线' }}</p>
+    <p>温度: {{ localDevice.temperature }}℃</p>
+    <p>模式: {{ localDevice.mode }}</p>
+    <p>风速: {{ localDevice.fan_speed }}</p>
+    <button @click="togglePower">开关</button>
+    <button @click="increaseTemperature">升温</button>
+    <button @click="decreaseTemperature">降温</button>
   </div>
 </template>
 
 <script>
 export default {
   props: {
-    modelValue: {
+    device: {
       type: Object,
       required: true
     }
   },
   data() {
     return {
-      modes: ['cool', 'heat', 'fan', 'dry'],
-      modeMap: {
-        cool: '制冷',
-        heat: '制热',
-        fan: '送风',
-        dry: '除湿'
-      }
+      localDevice: { ...this.device }
+    };
+  },
+  watch: {
+    device(newVal) {
+      this.localDevice = { ...newVal };
     }
   },
   methods: {
-    updateMode(mode) {
-      this.$emit('update:modelValue', {
-        ...this.modelValue,
-        mode
-      })
+    togglePower() {
+      this.localDevice.power = !this.localDevice.power;
+      this.emitUpdate();
     },
-    updateTemperature(step) {
+    increaseTemperature() {
+      if (this.localDevice.temperature < 30) {
+        this.localDevice.temperature += 1;
+        this.emitUpdate();
+      }
+    },
+    decreaseTemperature() {
+      if (this.localDevice.temperature > 16) {
+        this.localDevice.temperature -= 1;
+        this.emitUpdate();
+      }
+    },
+    emitUpdate() {
+      this.$emit('update-device', this.localDevice);
+    },
+    updateMode(mode) {
+      this.$emit('update:modelValue', { 
+        ...this.modelValue,
+        mode 
+      });
+    },
+    updateTemperature(change) {
       this.$emit('update:modelValue', {
         ...this.modelValue,
-        temperature: this.modelValue.temperature + step
-      })
+        temperature: this.modelValue.temperature + change
+      });
     }
   }
-}
+};
 </script>
+
+<style scoped>
+.air-conditioner-details {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 20px;
+}
+</style>
+
+
+

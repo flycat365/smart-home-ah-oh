@@ -1,5 +1,5 @@
 <template>
-  <div class="device-card" :class="deviceTypeClass">
+  <div class="device-card" :class="deviceTypeClass" @click="selectDevice">
     <div class="card-header">
       <h3>{{ deviceName }}</h3>
       <span class="status-dot" :class="deviceStatus"></span>
@@ -35,24 +35,79 @@
 
 <script>
 export default {
+  props: {
+    device: {
+      type: Object,
+      required: true
+    },
+    networkStatus: {
+      type: String,
+      required: true
+    }
+  },
   computed: {
     deviceTypeClass() {
       return this.device.meta?.types[0]?.replace(/-/g, '') || this.device.type;
     },
     deviceStatusText() {
-      return this.device.status === 'online' ? '在线' : '离线'
+      return this.device.status === 'online' ? '在线' : '离线';
     },
     deviceStatus() {
-      return this.device.status === 'online' ? 'active' : 'inactive'
+      return this.device.status === 'online' ? 'active' : 'inactive';
     },
     deviceName() {
       const names = {
         aircon: '空调',
         tv: '智能电视',
         light: '智能灯泡'
-      }
-      return names[this.device.type] || '未知设备'
+      };
+      return names[this.device.type] || '未知设备';
+    }
+  },
+  methods: {
+    selectDevice() {
+      this.$emit('select', this.device);
     }
   }
-}
+};
 </script>
+
+<style scoped>
+.device-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.device-card:hover {
+  transform: translateY(-5px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: red;
+}
+
+.status-dot.active {
+  background-color: green;
+}
+
+.device-properties p {
+  margin: 5px 0;
+}
+</style>
+
+
+

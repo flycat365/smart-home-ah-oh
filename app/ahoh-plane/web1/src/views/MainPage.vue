@@ -1,43 +1,50 @@
-
-
 <template>
   <div class="device-dashboard">
-    <!-- 合并重复的template标签 -->
-    <!-- 添加设备弹窗 -->
-    <div v-if="showAddDevice" class="add-dialog">
-      <div class="dialog-content">
-        <h3>选择设备类型</h3>
-        <button 
-          v-for="type in deviceTypes" 
-          :key="type"
-          @click="addDevice(type)"
-          class="device-type-btn"
-        >
-          {{ generateDeviceName(type) }}
-        </button>
-        <button @click="showAddDevice = false" class="cancel-btn">取消</button>
+    <header class="header">
+      <!-- 在原有时间天气基础上添加系统状态 -->
+      <div class="system-status">
+        <div class="status-item">
+          <span class="icon">📶</span>
+          <span>在线设备：{{ statusOverview.onlineDevices }}/{{ demoDevices.length }}</span>
+        </div>
+        <div class="status-item">
+          <span class="icon">💻</span>
+          <span>终端状态：{{ statusOverview.terminalStatus }}</span>
+        </div>
+        <div class="status-item">
+          <span class="icon">🌐</span>
+          <span>网络质量：{{ statusOverview.networkQuality }}</span>
+        </div>
       </div>
+      <div class="time">{{ currentTime }}</div>
+      <div class="weather">{{ weatherInfo }}</div>
+    </header>
+
+    <!-- 进度条显示控制终端状态 -->
+    <div class="progress-bar-container">
+      <label>控制终端运行内存:</label>
+      <div class="progress-bar">
+        <div class="progress" :style="{ width: memoryUsage + '%' }"></div>
+      </div>
+      <span>{{ memoryUsage }}%</span>
     </div>
 
-    <!-- 控制栏 -->
-    <div class="control-bar">
-      <button class="action-btn" @click="showAddDevice = true">
-        ＋ 添加设备
-      </button>
-      <div class="action-group">
-        <button class="action-btn secondary" @click="showDeleteDialog">
-          🗑️ 删除设备
-        </button>
-        <button class="action-btn secondary" @click="showEditDialog">
-          ✏️ 修改配置
-        </button>
-        <button class="action-btn secondary" @click="showMonitorPanel">
-          📶 实时监控
-        </button>
-      </div>
+    <!-- 设备管理按钮 -->
+    <div class="button-group">
+      <button @click="addDevice">增加</button>
+      <button @click="editDevice">修改</button>
+      <button @click="deleteDevice">删除</button>
+      <button @click="monitorDevice">监控</button>
     </div>
 
-    <!-- 设备列表 -->
+    <!-- 在控制栏后添加运行状态指示 -->
+    <div class="runtime-status">
+      <div class="status-light" :class="statusOverview.terminalStatus"></div>
+      <span>智能中枢运行中（{{ operationTime }}）</span>
+    </div>
+
+    <!-- 修改设备卡片部分增加状态显示 -->
+    <!-- 修复设备列表结构 -->
     <div v-if="demoDevices.length === 0" class="empty-state">
       <div class="empty-icon">📭</div>
       <p>暂无设备，点击上方按钮添加设备</p>
@@ -48,151 +55,240 @@
         v-for="device in demoDevices"
         :key="device.id"
         :device="device"
+        :network-status="getNetworkStatus(device)"
         @select="showDetails"
       />
     </div>
   </div>
 </template>
 
-<style>
-/* 新增弹窗样式 */
-.add-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog-content {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 300px;
-}
-
-.device-type-btn {
-  display: block;
-  width: 100%;
-  margin: 10px 0;
-  padding: 12px;
-  background: #3498db;
-  color: white;
-}
-
-.cancel-btn {
-  margin-top: 15px;
-  background: #e74c3c;
-}
-.device-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  padding: 20px;
-}
-
-.action-group {
-  display: flex;
-  gap: 12px;
-  margin-left: auto;
-}
-
-.action-btn.secondary {
-  background: #95a5a6;
-  padding: 8px 16px;
-}
-
-.action-btn.secondary:hover {
-  background: #7f8c8d;
-}
-
-.action-btn {
-  background: #3498db;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  margin: 20px;
-  transition: transform 0.2s;
-}
-
-.action-btn:hover {
-  transform: scale(1.05);
-}
-</style>
 <script>
 import DeviceCard from '../components/DeviceCard.vue'
-import { fetchDevices, createDevice } from '../api/deviceAPI' // 添加createDevice导入
 
 export default {
-  components: { DeviceCard },
+  components: {
+    DeviceCard
+  },
   data() {
     return {
-      showAddDevice: false,
-      deviceTypes: ['led', 'tv', 'air-conditioner'],
-      demoDevices: [] // 初始化空数组
-    }
+      // 新增状态数据
+      statusOverview: {
+        onlineDevices: 0,
+        terminalStatus: '正常',
+        networkQuality: '优秀'
+      },
+      operationTime: '0天0小时',
+      currentTime: new Date().toLocaleTimeString(),
+      weatherInfo: '晴朗', // 假设默认天气信息
+      demoDevices: [
+        { id: 1, type: 'aircon', meta: { types: ['air-con'] }, name: '空调A', status: 'online', temperature: 25, mode: '冷风', fan_speed: '高', signalStrength: 85 },
+        { id: 2, type: 'tv', meta: { types: ['smart-tv'] }, name: '电视B', status: 'offline', channel: 10, volume: 30, power: true, signalStrength: 40 },
+        { id: 3, type: 'light', meta: { types: ['smart-light'] }, name: '灯泡C', status: 'online', brightness: 70, color: '白色', power: false, signalStrength: 60 }
+      ],
+      selectedDevice: null,
+      memoryUsage: 50 // 假设初始内存使用率为50%
+    };
   },
-  async created() {
-    try {
-      this.demoDevices = await fetchDevices()
-      // 添加数据加载后的日志
-      console.log('设备加载完成:', this.demoDevices) 
-    } catch (error) {
-      console.error('加载设备失败:', error)
-      // 添加错误提示
-      alert('设备加载失败，请检查后端服务是否运行')
-    }
+  mounted() {
+    this.updateSystemStatus();
+    setInterval(() => {
+      this.currentTime = new Date().toLocaleTimeString();
+      // 模拟内存使用率变化
+      this.memoryUsage = Math.floor(Math.random() * 100);
+    }, 1000);
   },
   methods: {
-    // 删除未使用的getDevices方法
-    // 添加async关键字
-    async addDevice(deviceType) {
-      try {
-        const newDevice = await createDevice(deviceType);
-        this.demoDevices.unshift({
-          id: newDevice.device_id,
-          type: newDevice.meta.types[0],
-          name: newDevice.meta.desc || newDevice.meta.meta_desc,
-          status: 'online',
-          ...newDevice.attrib
-        });
-        this.showAddDevice = false;
-      } catch (error) {
-        console.error('添加设备失败:', error);
+    // 新增状态计算方法
+    updateSystemStatus() {
+      this.statusOverview.onlineDevices = this.demoDevices.filter(d => d.status === 'online').length;
+      this.operationTime = this.calculateRuntime();
+    },
+    getNetworkStatus(device) {
+      return device.signalStrength > 75 ? 'strong' : 
+             device.signalStrength > 50 ? 'medium' : 'weak';
+    },
+    calculateRuntime() {
+      const start = new Date(2023, 7, 1);
+      const diff = Date.now() - start;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      return `${days}天${hours}小时`;
+    },
+    showDetails(device) {
+      this.selectedDevice = device;
+      this.$router.push({ name: 'DeviceDetails', params: { deviceId: device.id } });
+    },
+    addDevice() {
+      console.log('Adding a new device');
+      // 实现添加设备逻辑
+    },
+    editDevice() {
+      if (!this.selectedDevice) {
+        alert('请选择一个设备进行修改');
+        return;
       }
+      console.log('Editing device:', this.selectedDevice);
+      // 实现修改设备逻辑
     },
-    showDeviceDetails(device) {
-      this.$parent.selectedDevice = device
-    }, // 添加缺失的逗号
-    showDeleteDialog() {
-      console.log('打开删除对话框')
-    },
-    showEditDialog() {
-      console.log('打开修改面板')
-    },
-    showMonitorPanel() {
-      console.log('显示监控界面')
-    },
-    
-    showDetails(device) {  // 添加缺失的事件处理方法
-      console.log('显示设备详情', device)
-    },
-    
-    // 修复设备名称生成逻辑
-    generateDeviceName(type) {
-      const nameMap = {
-        aircon: '空调',
-        tv: '电视',
-        light: '灯光'
+    deleteDevice() {
+      if (!this.selectedDevice) {
+        alert('请选择一个设备进行删除');
+        return;
       }
-      const count = this.demoDevices.filter(d => d.type === type).length + 1
-      return `${nameMap[type]} ${count}号`
+      this.demoDevices = this.demoDevices.filter(d => d.id !== this.selectedDevice.id);
+      this.selectedDevice = null;
+      console.log('Deleting device:', this.selectedDevice);
+      // 实现删除设备逻辑
+    },
+    monitorDevice() {
+      if (!this.selectedDevice) {
+        alert('请选择一个设备进行监控');
+        return;
+      }
+      console.log('Monitoring device:', this.selectedDevice);
+      // 实现监控设备逻辑
+    },
+    updateDevice(updatedDevice) {
+      const index = this.demoDevices.findIndex(d => d.id === updatedDevice.id);
+      if (index !== -1) {
+        this.demoDevices[index] = updatedDevice;
+      }
     }
   }
-}
+};
 </script>
+
+<style scoped>
+/* 新增状态样式 */
+.system-status {
+  display: flex;
+  gap: 20px;
+  background: #2c3e50;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.runtime-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #34495e;
+  margin: 15px 0;
+}
+
+.status-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2ecc71;
+}
+
+.status-light.warning {
+  background: #f1c40f;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+/* 设备卡片样式 */
+.device-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.device-card:hover {
+  transform: translateY(-5px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: red;
+}
+
+.status-dot.active {
+  background-color: green;
+}
+
+.device-properties p {
+  margin: 5px 0;
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #7f8c8d;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.time, .weather {
+  margin-top: 10px;
+  font-size: 1.2em;
+}
+
+.device-dashboard {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.button-group {
+  margin: 20px 0;
+}
+
+.progress-bar-container {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  width: 100%;
+  background-color: #ddd;
+  border-radius: 5px;
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.progress {
+  height: 20px;
+  background-color: #4caf50;
+  width: 0;
+  transition: width 0.5s ease-in-out;
+}
+</style>
+
+
+

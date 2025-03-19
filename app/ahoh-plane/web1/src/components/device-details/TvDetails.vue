@@ -1,43 +1,79 @@
 <template>
   <div class="tv-details">
-    <h3>电视控制中心</h3>
-    <div class="channel-control">
-      <button @click="changeChannel(-1)">◄</button>
-      <span>频道: {{ device.channel }}</span>
-      <button @click="changeChannel(1)">►</button>
-    </div>
-    <div class="volume-control">
-      <input type="range" min="0" max="100" v-model="device.volume">
-      <span>音量: {{ device.volume }}%</span>
-    </div>
+    <h2>{{ localDevice.name }}</h2>
+    <p>状态: {{ localDevice.status === 'online' ? '在线' : '离线' }}</p>
+    <p>频道: {{ localDevice.channel }}</p>
+    <p>音量: {{ localDevice.volume }}</p>
+    <p>电源: {{ localDevice.power ? '开' : '关' }}</p>
+    <button @click="togglePower">开关</button>
+    <button @click="increaseVolume">增大音量</button>
+    <button @click="decreaseVolume">减小音量</button>
+    <button @click="nextChannel">下一频道</button>
+    <button @click="previousChannel">上一频道</button>
   </div>
 </template>
 
 <script>
 export default {
-  props: ['modelValue'],
-  mounted() {
-    // 添加服务测试代码
-    this.testBackendConnection();
+  props: {
+    device: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      localDevice: { ...this.device }
+    };
+  },
+  watch: {
+    device(newVal) {
+      this.localDevice = { ...newVal };
+    }
   },
   methods: {
-    async testBackendConnection() {
-      try {
-        const response = await fetch('http://localhost:3000/devices');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const devices = await response.json();
-        console.log('后端服务响应正常，当前设备数:', devices.length);
-      } catch (error) {
-        console.error('后端连接测试失败:', error);
-        alert('后端服务不可用，请检查服务是否启动');
+    togglePower() {
+      this.localDevice.power = !this.localDevice.power;
+      this.emitUpdate();
+    },
+    increaseVolume() {
+      if (this.localDevice.volume < 100) {
+        this.localDevice.volume += 1;
+        this.emitUpdate();
       }
     },
-    changeChannel(step) {
-      this.$emit('update:modelValue', {
-        ...this.modelValue,
-        channel: Math.max(1, this.modelValue.channel + step)
-      })
+    decreaseVolume() {
+      if (this.localDevice.volume > 0) {
+        this.localDevice.volume -= 1;
+        this.emitUpdate();
+      }
+    },
+    nextChannel() {
+      this.localDevice.channel += 1;
+      this.emitUpdate();
+    },
+    previousChannel() {
+      if (this.localDevice.channel > 1) {
+        this.localDevice.channel -= 1;
+        this.emitUpdate();
+      }
+    },
+    emitUpdate() {
+      this.$emit('update-device', this.localDevice);
     }
   }
-}
+};
 </script>
+
+<style scoped>
+.tv-details {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 20px;
+}
+</style>
+
+
+
