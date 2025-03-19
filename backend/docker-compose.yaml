@@ -12,7 +12,7 @@ services:
       volumes:
         - ./nginx.conf:/etc/nginx/nginx.conf
         - ./html:/web-pages/default
-        - ../web/ahoh-plane/dist:/web-pages/ahoh-plane
+        - ../app/ahoh-plane/dist:/web-pages/ahoh-plane
       restart: on-failure:3
       depends_on:
         - mqtt-broker
