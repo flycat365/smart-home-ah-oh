@@ -1,164 +1,164 @@
-// 设备模拟器开关（开发模式自动启用）
-const useMockAPI = process.env.NODE_ENV !== 'production';
+import {
+  json,
+  req
+} from './axiosFun';
 
-// 虚拟服务响应时间（开发模式使用）
-const mockDelay = () => new Promise(resolve => setTimeout(resolve, 500));
-
-// 设备类型枚举
-const DeviceType = {
-  AIRCON: 'aircon',
-  TV: 'tv',
-  LIGHT: 'light'
+/**
+ * 设备管理
+ **/
+// 设备列表
+export const DeviceList = (params) => {
+  return json("post", "/device/list/"+params.size+"/"+params.page, params)
+};
+// 创建设备
+export const DeviceCreate = (params) => {
+  return req("post", "/device/create", params)
+};
+// 子设备列表
+export const GatewayChildren = (deviceId) => {
+  return req("get", "/device/" + deviceId + "/children", {})
+};
+// 设备详情
+export const DeviceDetail = (deviceId) => {
+  return req("get", "/device/" + deviceId+"/detail", {})
+};
+// 获取设备信息
+export const GetDeviceByDn = (pk,dn) => {
+  return req("get", "/device/" + pk +"/"+dn, {})
+};
+//删除设备
+export const DeleteDevice = (deviceId) => {
+  return req("post", "/device/" + deviceId+"/delete", {})
+};
+//解绑
+export const UnbindDevice = (deviceId) => {
+  return req("post", "/device/" + deviceId + "/unbind", {})
+};
+// 设备属性设置
+export const PropertySet = (deviceId, params) => {
+  return json("post", "/device/" + deviceId + "/service/property/set", params)
+};
+// 设备服务调用
+export const ServiceInvoke = (deviceId, identifier, params) => {
+  return json("post", "/device/" + deviceId + "/service/" + identifier+"/invoke", params)
+};
+// 设备日志查询
+export const DeviceLogs = (deviceId, params) => {
+  return req("post", "/device/" + deviceId + "/logs/"+params.size+"/"+params.page, params)
 };
 
-// 生成随机设备数据
-const generateMockDevice = (type) => {
-  const randomHex = () => Math.floor(Math.random()*256).toString(16).padStart(2,'0');
-  
-  const baseDevice = {
-    id: `${type}-${Math.random().toString(36).slice(2, 7)}`,
-    status: 'online',
-    lastUpdated: new Date().toISOString(),
-    meta: {
-      type: type,
-      firmware: 'v2.1.0'
-    }
-  };
-
-  switch(type) {
-    case DeviceType.AIRCON:
-      return {
-        ...baseDevice,
-        temperature: 24 + Math.floor(Math.random() * 6),
-        mode: ['cool', 'heat', 'dry'][Math.floor(Math.random()*3)],
-        fanSpeed: ['low', 'medium', 'high'][Math.floor(Math.random()*3)]
-      };
-    case DeviceType.TV:
-      return {
-        ...baseDevice,
-        channel: Math.floor(Math.random()*100),
-        volume: 30 + Math.floor(Math.random()*40),
-        inputSource: ['HDMI1', 'HDMI2', 'AV'][Math.floor(Math.random()*3)]
-      };
-    case DeviceType.LIGHT:
-      return {
-        ...baseDevice,
-        brightness: Math.floor(Math.random()*100),
-        color: `#${randomHex()}${randomHex()}${randomHex()}`,
-        isDimmable: Math.random() > 0.5
-      };
-    default:
-      return baseDevice;
-  }
+// 取物模型
+export const GetDeviceThingModel = (deviceId) => {
+  return req("get", "/device/"+deviceId+"/thingModel" , {})
 };
 
-// API请求封装器
-// 在apiClient之后添加测试模块
-const testModule = {
-  _mockData: [],
-  _errorRate: 0,
-  
-  // 重置模拟数据
-  reset() {
-    this._mockData = [];
-    this._errorRate = 0;
-    console.log('[测试模式] 已重置模拟数据');
-  },
-
-  // 设置错误率（0-1）
-  setErrorRate(rate) {
-    this._errorRate = Math.min(1, Math.max(0, rate));
-    console.log(`[测试模式] 错误率设置为 ${this._errorRate * 100}%`);
-  },
-
-  // 批量生成测试设备
-  generateDevices(count = 5) {
-    this._mockData = Array.from({ length: count }, () => {
-      const type = [DeviceType.AIRCON, DeviceType.TV, DeviceType.LIGHT][
-        Math.floor(Math.random() * 3)
-      ];
-      return generateMockDevice(type);
-    });
-    console.log(`[测试模式] 已生成 ${count} 台测试设备`);
-  }
+// 取设备属性历史数据
+export const GetDevicePropertyHistory = (deviceId,name,start,end) => {
+  return req("get", "/device/"+deviceId+"/property/"+name+"/"+start+"/"+end , {})
 };
 
-// 修改apiClient以支持测试模式
-const apiClient = {
-  get: async (url) => {
-    if(useMockAPI) {
-      await mockDelay();
-      
-      // 模拟随机错误
-      if(Math.random() < testModule._errorRate) {
-        throw new Error('模拟API请求失败');
-      }
-
-      return { 
-        data: testModule._mockData.length > 0 
-          ? testModule._mockData 
-          : Array.from({length: 5}, () => generateMockDevice(
-            [DeviceType.AIRCON, DeviceType.TV, DeviceType.LIGHT][Math.floor(Math.random()*3)]
-          )) 
-      };
-    }
-    
-    const response = await fetch(`http://localhost:3000${url}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    return response.json();
-  },
-
-  post: async (url, data) => {
-    if(useMockAPI) {
-      await mockDelay();
-      return { data: { ...data, id: `mock-${Date.now()}` } };
-    }
-
-    const response = await fetch(`http://localhost:3000${url}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    return response.json();
-  }
+// 添加设备标签
+export const DeviceTagAdd = (params) => {
+  return req("post", "/device/"+params.deviceId+"/tag/add" , params)
 };
 
-// 设备操作接口
-export const deviceAPI = {
-  // 获取设备列表
-  fetchDevices: async () => {
-    const response = await apiClient.get('/devices');
-    return response.data;
-  },
+// 模拟设备消息发送
+export const SimulateSend = (deviceId,params) => {
+  return json("post", "/device/"+deviceId+"/simulateSend" , params)
+};
 
-  // 创建设备
-  createDevice: async (deviceType) => {
-    const response = await apiClient.post('/devices', { type: deviceType });
-    return response.data;
-  },
 
-  // 更新设备属性
-  updateDevice: async (deviceId, attributes) => {
-    if(useMockAPI) {
-      await mockDelay();
-      return { ...attributes, lastUpdated: new Date().toISOString() };
-    }
-    
-    const response = await apiClient.post(`/devices/${deviceId}`, attributes);
-    return response.data;
-  },
+// 虚拟设备列表
+export const VirtualDeviceList = (params) => {
+  return json("post", "/virtual_device/list/"+params.size+"/"+params.page, {})
+};
 
-  // 删除设备
-  deleteDevice: async (deviceId) => {
-    if(useMockAPI) {
-      await mockDelay();
-      return { status: 'success' };
-    }
+// 添加虚拟设备
+export const VirtualDeviceAdd = (params) => {
+  return req("post", "/virtual_device/add" , params)
+};
 
-    const response = await fetch(`http://localhost:3000/devices/${deviceId}`, {
-      method: 'DELETE'
-    });
-    return response.json();
-  }
+// 修改虚拟设备
+export const VirtualDeviceModify = (params) => {
+  return req("post", "/virtual_device/modify" , params)
+};
+
+//删除虚拟设备
+export const VirtualDeviceDelete = (id) => {
+  return req("delete", `/virtual_device/${id}/delete`, {})
+};
+
+//设置虚拟设备状态
+export const VirtualDeviceSetState = (params) => {
+  return req("post", `/virtual_device/${params.id}/setState`, params)
+};
+
+// 虚拟设备详情
+export const VirtualDeviceDetail = (id) => {
+  return req("get", `/virtual_device/${id}/detail`, {})
+};
+
+// 保存关联设备列表
+export const VirtualDeviceSaveDevices = (id,devices) => {
+  return json("post", `/virtual_device/${id}/saveDevices`, devices)
+};
+
+// 保存虚拟设备脚本
+export const VirtualDeviceSaveScript = (id,script) => {
+  return req("post", `/virtual_device/${id}/saveScript`, {script:script})
+};
+
+// 执行虚拟设备
+export const VirtualDeviceRun = (id) => {
+  return req("post", `/virtual_device/${id}/run`, {})
+};
+
+// 获取虚拟设备日志
+export const VirtualDeviceLogList = (params) => {
+  return req("post", `/virtual_device/${params.id}/logs/${params.size}/${params.page}`, {})
+};
+
+// 设备分组列表
+export const DeviceGroupList = (params) => {
+  return req("post", "/device/groups/"+params.size+"/"+params.page, params)
+};
+
+// 添加分组
+export const GroupAdd = (params) => {
+  return req("post", "/device/group/add", params)
+};
+
+// 修改分组
+export const GroupSave = (params) => {
+  return req("post", "/device/group/save", params)
+};
+
+// 删除分组
+export const GroupDelete = (id) => {
+  return req("delete", "/device/group/delete/"+id, {})
+};
+
+//将设备添加到组中
+export const GroupDeviceAdd = (group,devices) => {
+  return json("post", "/device/group/addDevices/"+group, devices)
+};
+
+//将设备从组中删除
+export const GroupDeviceRemove = (group,devices) => {
+  return json("post", "/device/group/removeDevices/"+group, devices)
+};
+
+//设备配置获取
+export const DeviceConfigGet = (deviceId) => {
+  return req("get", "/device/config/"+deviceId+"/get",{})
+};
+
+//设备配置保存
+export const DeviceConfigSave = (deviceId,config) => {
+  return req("post", "/device/config/"+deviceId+"/save", config)
+};
+
+//设备配置下发
+export const DeviceConfigSend = (deviceId) => {
+  return req("post", "/device/config/"+deviceId+"/send", {})
 };

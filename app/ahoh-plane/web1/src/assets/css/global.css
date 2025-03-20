@@ -1,0 +1,47 @@
+:root {
+  /* 主题色 */
+  --ahs-primary: #409EFF;
+  --ahs-success: #67C23A;
+  --ahs-warning: #E6A23C;
+  --ahs-danger: #F56C6C;
+  --ahs-info: #909399;
+
+  /* 中性色 */
+  --ahs-black: #303133;
+  --ahs-light-black: #606266;
+  --ahs-gray: #909399;
+  --ahs-light-gray: #C0C4CC;
+}
+
+/* 基础布局样式 */
+.ahs-flex {
+  display: flex;
+  &-center {
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* 通用动画 */
+.ahs-fade-enter-active,
+.ahs-fade-leave-active {
+  transition: opacity 0.3s;
+}
+.ahs-fade-enter,
+.ahs-fade-leave-to {
+  opacity: 0;
+}
+
+/* 重置浏览器默认样式 */
+body {
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* 通用工具类 */
+.ahs-text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
