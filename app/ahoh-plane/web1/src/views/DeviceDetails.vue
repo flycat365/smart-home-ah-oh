@@ -23,7 +23,10 @@ export default {
   },
   computed: {
     selectedDevice() {
-      return this.$store.state.devices.find(device => device.id === parseInt(this.deviceId));
+      // Get device from parent component's demoDevices
+      return this.$parent.demoDevices.find(
+        device => device.id === this.deviceId
+      );
     },
     deviceComponent() {
       switch (this.selectedDevice.type) {

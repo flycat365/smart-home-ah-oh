@@ -1,4 +1,6 @@
 <template>
+
+  
   <div class="device-dashboard">
     <header class="header">
       <!-- 在原有时间天气基础上添加系统状态 -->
@@ -18,6 +20,9 @@
       </div>
       <div class="time">{{ currentTime }}</div>
       <div class="weather">{{ weatherInfo }}</div>
+
+
+      
     </header>
 
     <!-- 进度条显示控制终端状态 -->
@@ -47,18 +52,19 @@
     <!-- 修复设备列表结构 -->
     <div v-if="demoDevices.length === 0" class="empty-state">
       <div class="empty-icon">📭</div>
-      <p>暂无设备，点击上方按钮添加设备</p>
+      <p>暂无设备，点击上方按钮添加设备</p> 
     </div>
 
     <div v-else class="device-grid">
+   
       <DeviceCard 
         v-for="device in demoDevices"
         :key="device.id"
         :device="device"
         :network-status="getNetworkStatus(device)"
-        @select="showDetails"
       />
     </div>
+    
   </div>
 </template>
 
@@ -90,14 +96,25 @@ export default {
     };
   },
   mounted() {
+    // Consolidated event listeners
+    this.$eventBus.$on('device-added', this.handleNewDevice);
+    this.$eventBus.$on('device-updated', this.handleDeviceUpdate);
+    this.$eventBus.$on('device-deleted', this.handleDeviceDeleted);
+
     this.updateSystemStatus();
     setInterval(() => {
       this.currentTime = new Date().toLocaleTimeString();
-      // 模拟内存使用率变化
       this.memoryUsage = Math.floor(Math.random() * 100);
     }, 1000);
   },
-  methods: {
+
+  beforeDestroy() {
+    // Consolidated cleanup
+    this.$eventBus.$off('device-added', this.handleNewDevice);
+    this.$eventBus.$off('device-updated', this.handleDeviceUpdate);
+    this.$eventBus.$off('device-deleted', this.handleDeviceDeleted);
+  },
+    methods: {
     // 新增状态计算方法
     updateSystemStatus() {
       this.statusOverview.onlineDevices = this.demoDevices.filter(d => d.status === 'online').length;
@@ -119,40 +136,55 @@ export default {
       this.$router.push({ name: 'DeviceDetails', params: { deviceId: device.id } });
     },
     addDevice() {
-      console.log('Adding a new device');
-      // 实现添加设备逻辑
+      this.$router.push({ name: 'AddDevice' });
     },
     editDevice() {
+      this.selectedDevice=1;
       if (!this.selectedDevice) {
         alert('请选择一个设备进行修改');
         return;
       }
-      console.log('Editing device:', this.selectedDevice);
-      // 实现修改设备逻辑
+      this.$router.push({ 
+        name: 'EditDevice',
+        params: { deviceId: this.selectedDevice.id }
+      });
+    },
+    // 添加事件监听
+    mounted() {
+      this.$eventBus.$on('device-updated', this.handleDeviceUpdate);
+    },
+    beforeDestroy() {
+      this.$eventBus.$off('device-updated');
+    },
+    handleDeviceUpdate(updatedDevice) {
+      const index = this.demoDevices.findIndex(d => d.id === updatedDevice.id);
+      if (index > -1) {
+        this.$set(this.demoDevices, index, updatedDevice);
+        this.updateSystemStatus();
+      }
     },
     deleteDevice() {
-      if (!this.selectedDevice) {
-        alert('请选择一个设备进行删除');
-        return;
-      }
-      this.demoDevices = this.demoDevices.filter(d => d.id !== this.selectedDevice.id);
-      this.selectedDevice = null;
-      console.log('Deleting device:', this.selectedDevice);
-      // 实现删除设备逻辑
+    
+      this.$router.push({
+        name: 'DeleteDevice',
+       
+      });
     },
+    
     monitorDevice() {
-      if (!this.selectedDevice) {
-        alert('请选择一个设备进行监控');
-        return;
-      }
-      console.log('Monitoring device:', this.selectedDevice);
-      // 实现监控设备逻辑
+    
+      this.$router.push({
+        name: 'MonitorDevice',
+        
+      });
     },
-    updateDevice(updatedDevice) {
-      const index = this.demoDevices.findIndex(d => d.id === updatedDevice.id);
-      if (index !== -1) {
-        this.demoDevices[index] = updatedDevice;
-      }
+    
+   
+  
+    handleDeviceDeleted(deviceId) {
+      this.demoDevices = this.demoDevices.filter(d => d.id !== deviceId);
+      this.selectedDevice = null;
+      this.updateSystemStatus();
     }
   }
 };

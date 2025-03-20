@@ -66,7 +66,19 @@ export default {
   },
   methods: {
     selectDevice() {
-      this.$emit('select', this.device);
+      const detailRoutes = {
+        aircon: 'AirConditionerDetails',
+        tv: 'TvDetails',
+        light: 'LedDetails'
+      };
+      
+      this.$router.push({
+        name: detailRoutes[this.device.type],
+        params: { 
+          deviceId: this.device.id,
+          deviceType: this.device.type 
+        }
+      });
     }
   }
 };

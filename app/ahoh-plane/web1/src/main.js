@@ -7,6 +7,9 @@ Vue.use(VueRouter)  // Add this line
 
 
 
+// 在Vue实例创建前添加事件总线
+Vue.prototype.$eventBus = new Vue()
+
 new Vue({
   router,
   render: h => h(App)
