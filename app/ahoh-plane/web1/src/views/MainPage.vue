@@ -70,6 +70,8 @@
 
 <script>
 import DeviceCard from '../components/DeviceCard.vue'
+import deviceAPI from '../api/deviceAPI'
+import _ from 'lodash' // Add lodash import
 
 export default {
   components: {
@@ -95,100 +97,120 @@ export default {
       memoryUsage: 50 // 假设初始内存使用率为50%
     };
   },
+  // Remove duplicate lifecycle hooks and merge into one
   mounted() {
-    // Consolidated event listeners
-    this.$eventBus.$on('device-added', this.handleNewDevice);
-    this.$eventBus.$on('device-updated', this.handleDeviceUpdate);
-    this.$eventBus.$on('device-deleted', this.handleDeviceDeleted);
+    this.loadDevices()
+    this.$eventBus.$on('device-added', this.handleNewDevice)
+    this.$eventBus.$on('device-updated', this.handleDeviceUpdate)
+    this.$eventBus.$on('device-deleted', this.handleDeviceDeleted)
 
-    this.updateSystemStatus();
+    this.updateSystemStatus()
     setInterval(() => {
-      this.currentTime = new Date().toLocaleTimeString();
-      this.memoryUsage = Math.floor(Math.random() * 100);
-    }, 1000);
+      this.currentTime = new Date().toLocaleTimeString()
+      this.memoryUsage = Math.floor(Math.random() * 100)
+    }, 1000)
   },
 
   beforeDestroy() {
-    // Consolidated cleanup
-    this.$eventBus.$off('device-added', this.handleNewDevice);
-    this.$eventBus.$off('device-updated', this.handleDeviceUpdate);
-    this.$eventBus.$off('device-deleted', this.handleDeviceDeleted);
+    this.$eventBus.$off('device-added', this.handleNewDevice)
+    this.$eventBus.$off('device-updated', this.handleDeviceUpdate)
+    this.$eventBus.$off('device-deleted', this.handleDeviceDeleted)
   },
-    methods: {
-    // 新增状态计算方法
+
+  methods: {
+    async loadDevices() {
+      try {
+        const response = await deviceAPI.getDevices()
+        this.demoDevices = response.data || []
+        this.updateSystemStatus()
+      } catch (error) {
+        console.error('设备加载失败:', error)
+        this.demoDevices = []
+        this.updateSystemStatus()
+      }
+    },
+
+    async handleDeviceUpdate(updatedDevice) {
+      try {
+        await deviceAPI.updateDeviceAttributes(
+          updatedDevice.id,
+          _.omit(updatedDevice, ['id', 'meta']) // Use imported lodash
+        )
+        const index = this.demoDevices.findIndex(d => d.id === updatedDevice.id)
+        if (index > -1) {
+          this.$set(this.demoDevices, index, updatedDevice)
+        }
+      } catch (error) {
+        console.error('设备更新失败:', error)
+        this.demoDevices = []
+      }
+    },
+    
+    // Add this method definition
     updateSystemStatus() {
       this.statusOverview.onlineDevices = this.demoDevices.filter(d => d.status === 'online').length;
       this.operationTime = this.calculateRuntime();
     },
-    getNetworkStatus(device) {
-      return device.signalStrength > 75 ? 'strong' : 
-             device.signalStrength > 50 ? 'medium' : 'weak';
-    },
+// 根据错误提示，代码中可能需要将逗号替换为冒号，不过当前代码片段中没有逗号，推测可能是上下文中存在语法错误。
+// 假设错误是在当前行与其他代码结合处出现的，这里先保持当前行代码不变，后续需要检查整体代码上下文。
+
+    
+
     calculateRuntime() {
-      const start = new Date(2023, 7, 1);
-      const diff = Date.now() - start;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      return `${days}天${hours}小时`;
+      const start = new Date(2023, 7, 1)
+      const diff = Date.now() - start
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      return `${days}天${hours}小时`
     },
-    showDetails(device) {
-      this.selectedDevice = device;
-      this.$router.push({ name: 'DeviceDetails', params: { deviceId: device.id } });
-    },
+    
+    // 新增路由跳转方法
     addDevice() {
-      this.$router.push({ name: 'AddDevice' });
+      this.$router.push({ name: 'AddDevice' })
     },
+    
     editDevice() {
-      this.selectedDevice=1;
       if (!this.selectedDevice) {
-        alert('请选择一个设备进行修改');
-        return;
+        alert('请选择一个设备进行修改')
+        return
       }
       this.$router.push({ 
         name: 'EditDevice',
         params: { deviceId: this.selectedDevice.id }
-      });
+      })
     },
-    // 添加事件监听
-    mounted() {
-      this.$eventBus.$on('device-updated', this.handleDeviceUpdate);
-    },
-    beforeDestroy() {
-      this.$eventBus.$off('device-updated');
-    },
-    handleDeviceUpdate(updatedDevice) {
-      const index = this.demoDevices.findIndex(d => d.id === updatedDevice.id);
-      if (index > -1) {
-        this.$set(this.demoDevices, index, updatedDevice);
-        this.updateSystemStatus();
-      }
-    },
-    deleteDevice() {
     
-      this.$router.push({
+    deleteDevice() {
+      if (!this.selectedDevice) {
+        alert('请选择要删除的设备')
+        return
+      }
+      this.$router.push({ 
         name: 'DeleteDevice',
-       
-      });
+        params: { deviceId: this.selectedDevice.id }
+      })
     },
     
     monitorDevice() {
-    
-      this.$router.push({
+      if (!this.selectedDevice) {
+        alert('请选择要监控的设备')
+        return
+      }
+      this.$router.push({ 
         name: 'MonitorDevice',
-        
-      });
+        params: { deviceId: this.selectedDevice.id }
+      })
     },
     
-   
-  
-    handleDeviceDeleted(deviceId) {
-      this.demoDevices = this.demoDevices.filter(d => d.id !== deviceId);
-      this.selectedDevice = null;
-      this.updateSystemStatus();
-    }
+    // 补充网络状态计算方法
+    getNetworkStatus(device) {
+      return device.signalStrength > 75 ? 'strong' : 
+             device.signalStrength > 50 ? 'medium' : 'weak'
+    },
   }
-};
+}
 </script>
+
 
 <style scoped>
 /* 新增状态样式 */

@@ -1,3 +1,6 @@
+// 在文件顶部添加
+import '@/assets/css/global.css'
+
 import Vue from 'vue'
 import App from './App.vue'
 import VueRouter from 'vue-router'
